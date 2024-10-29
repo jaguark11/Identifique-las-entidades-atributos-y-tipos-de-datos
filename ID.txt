@@ -1,0 +1,181 @@
+from sqlalchemy import create_engine, Column, Integer, String, Text, Float, ForeignKey, Table
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+
+Base = declarative_base()
+
+# 1. Preparación de Recetas de Cocina
+class Receta(Base):
+    __tablename__ = 'recetas'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False)
+    tiempo_preparacion = Column(Integer)  # en minutos
+    dificultad = Column(String(50))
+    instrucciones = Column(Text)
+
+    ingredientes = relationship("Ingrediente", secondary="receta_ingredientes")
+    pasos = relationship("Paso", back_populates="receta")
+
+class Ingrediente(Base):
+    __tablename__ = 'ingredientes'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False)
+    cantidad = Column(Float)
+    unidad = Column(String(50))
+
+class Paso(Base):
+    __tablename__ = 'pasos'
+    id = Column(Integer, primary_key=True)
+    descripcion = Column(Text)
+    orden = Column(Integer)
+    receta_id = Column(Integer, ForeignKey('recetas.id'))
+    receta = relationship("Receta", back_populates="pasos")
+
+receta_ingredientes = Table('receta_ingredientes', Base.metadata,
+    Column('receta_id', Integer, ForeignKey('recetas.id')),
+    Column('ingrediente_id', Integer, ForeignKey('ingredientes.id'))
+)
+
+# 2. Liga de Fútbol - Partidos de una Temporada
+class Equipo(Base):
+    __tablename__ = 'equipos'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False)
+    ciudad = Column(String(50))
+
+class Temporada(Base):
+    __tablename__ = 'temporadas'
+    id = Column(Integer, primary_key=True)
+    anio = Column(Integer, nullable=False)
+
+class Estadio(Base):
+    __tablename__ = 'estadios'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False)
+    capacidad = Column(Integer)
+    ciudad = Column(String(50))
+
+class Partido(Base):
+    __tablename__ = 'partidos'
+    id = Column(Integer, primary_key=True)
+    fecha = Column(String(20))
+    equipo_local_id = Column(Integer, ForeignKey('equipos.id'))
+    equipo_visitante_id = Column(Integer, ForeignKey('equipos.id'))
+    estadio_id = Column(Integer, ForeignKey('estadios.id'))
+    temporada_id = Column(Integer, ForeignKey('temporadas.id'))
+    marcador_local = Column(Integer)
+    marcador_visitante = Column(Integer)
+
+# 3. Reserva de Habitación en un Hotel
+class Cliente(Base):
+    __tablename__ = 'clientes'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100))
+    apellido = Column(String(100))
+    telefono = Column(String(20))
+    email = Column(String(100), unique=True)
+
+class Habitacion(Base):
+    __tablename__ = 'habitaciones'
+    id = Column(Integer, primary_key=True)
+    numero = Column(Integer, unique=True)
+    tipo = Column(String(50))
+    capacidad = Column(Integer)
+    precio_noche = Column(Float)
+
+class Reserva(Base):
+    __tablename__ = 'reservas'
+    id = Column(Integer, primary_key=True)
+    cliente_id = Column(Integer, ForeignKey('clientes.id'))
+    habitacion_id = Column(Integer, ForeignKey('habitaciones.id'))
+    fecha_entrada = Column(String(20))
+    fecha_salida = Column(String(20))
+    estado = Column(String(20))
+
+    cliente = relationship("Cliente")
+    habitacion = relationship("Habitacion")
+
+# 4. Matrícula de Estudiantes
+class Estudiante(Base):
+    __tablename__ = 'estudiantes'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100))
+    apellido = Column(String(100))
+    grado_id = Column(Integer, ForeignKey('grados.id'))
+
+class Profesor(Base):
+    __tablename__ = 'profesores'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100))
+    apellido = Column(String(100))
+    telefono = Column(String(20))
+    email = Column(String(100), unique=True)
+
+class Materia(Base):
+    __tablename__ = 'materias'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100))
+    profesor_id = Column(Integer, ForeignKey('profesores.id'))
+    profesor = relationship("Profesor")
+
+class Grado(Base):
+    __tablename__ = 'grados'
+    id = Column(Integer, primary_key=True)
+    nivel = Column(String(50))
+    seccion = Column(String(50))
+
+    estudiantes = relationship("Estudiante", back_populates="grado")
+    materias = relationship("Materia", back_populates="grado")
+
+# 5. Simulación de Red Social
+class Usuario(Base):
+    __tablename__ = 'usuarios'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(50))
+    apellido = Column(String(50))
+    direccion = Column(String(100), nullable=True)
+    telefono = Column(String(20), nullable=True)
+    email = Column(String(100), unique=True, nullable=True)
+    contrasena = Column(String(100))
+    foto = Column(String(100), nullable=True)
+    es_celebridad = Column(Integer, default=0)
+
+    contactos = relationship("Contacto", back_populates="usuario")
+    grupos = relationship("Grupo", back_populates="usuario")
+    bloqueos = relationship("Bloqueo", back_populates="usuario")
+
+class Contacto(Base):
+    __tablename__ = 'contactos'
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'))
+    contacto_id = Column(Integer, ForeignKey('usuarios.id'))
+    comentario = Column(Text)
+
+    usuario = relationship("Usuario", foreign_keys=[usuario_id], back_populates="contactos")
+    contacto = relationship("Usuario", foreign_keys=[contacto_id])
+
+class Grupo(Base):
+    __tablename__ = 'grupos'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(50))
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'))
+
+    usuario = relationship("Usuario", back_populates="grupos")
+    contactos = relationship("Contacto", secondary="grupo_contactos")
+
+grupo_contactos = Table('grupo_contactos', Base.metadata,
+    Column('grupo_id', Integer, ForeignKey('grupos.id')),
+    Column('contacto_id', Integer, ForeignKey('contactos.id'))
+)
+
+class Bloqueo(Base):
+    __tablename__ = 'bloqueos'
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'))
+    bloqueado_id = Column(Integer, ForeignKey('usuarios.id'))
+
+    usuario = relationship("Usuario", foreign_keys=[usuario_id], back_populates="bloqueos")
+    bloqueado = relationship("Usuario", foreign_keys=[bloqueado_id])
+
+# Configuración de la base de datos
+engine = create_engine('sqlite:///actividad.db')
+Base.metadata.create_all(engine)
